@@ -1,0 +1,123 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans" 
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
+	xmlns:context="http://www.springframework.org/schema/context"
+	xmlns:aop="http://www.springframework.org/schema/aop" 
+	xmlns:tx="http://www.springframework.org/schema/tx"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans 
+            http://www.springframework.org/schema/beans/spring-beans-3.0.xsd
+            http://www.springframework.org/schema/aop 
+            http://www.springframework.org/schema/aop/spring-aop-3.0.xsd
+            http://www.springframework.org/schema/tx 
+            http://www.springframework.org/schema/tx/spring-tx-3.0.xsd
+            http://www.springframework.org/schema/context 
+            http://www.springframework.org/schema/context/spring-context-3.0.xsd">
+    
+    <!-- 开启注解处理器 -->
+    <context:annotation-config/>
+    
+    <!-- 数据库连接池
+	<bean id="dataSource" class="org.springframework.jdbc.datasource.DriverManagerDataSource">
+		<property name="driverClassName" value="com.mysql.jdbc.Driver" />
+		<property name="url" value="jdbc:mysql://localhost:3306/mobiledata" />
+		<property name="username" value="root" />
+		<property name="password" value="yangjian" /></bean> -->
+		
+	<!-- 数据库连接池Baidu Cloud
+	<bean id="dataSource" class="org.springframework.jdbc.datasource.DriverManagerDataSource">
+		<property name="driverClassName" value="com.mysql.jdbc.Driver" />
+		<property name="url"
+			value="jdbc:mysql://sqld.duapp.com:4050/wBvXlvcvsEVNXPATIzax?createDatabaseIfNotExist=true&amp;useUnicode=true&amp;characterEncoding=utf-8&amp;zeroDateTimeBehavior=convertToNull&amp;transformedBitIsBoolean=true" />
+		<property name="username" value="0CSOg9w8tqtOTlxlALDI8Gso" />
+		<property name="password" value="BUwGnZQGmI1KqX72FNsWzrd3ZZQpUfR9" />
+	</bean> -->
+	
+	<!-- 定义使用C3P0连接池的数据源 -->
+	<bean id="dataSource" class="com.mchange.v2.c3p0.ComboPooledDataSource">
+		<property name="driverClass"><value>com.mysql.jdbc.Driver</value></property>
+		<property name="jdbcUrl">
+			<value>jdbc:mysql://localhost:3306/mobilecontextdata</value></property>
+		<property name="user"><value>root</value></property>
+		<property name="password"><value>yangjian</value></property>
+		<property name="maxPoolSize"><value>50</value></property>
+		<property name="minPoolSize"><value>3</value></property>
+		<property name="initialPoolSize"><value>3</value></property>
+		<property name="maxIdleTime"><value>30</value></property>
+	</bean>
+
+    <!-- 定义Hibernate的SessionFactory -->
+    <bean id="sessionFactory" class="org.springframework.orm.hibernate3.LocalSessionFactoryBean">
+        <!-- 依赖注入上面定义的数据源dataSource -->
+        <property name="dataSource" ref="dataSource"/>
+        <!-- 注册Hibernate的ORM映射文件 -->
+        <property name="mappingResources">
+            <list>
+            	<value>com/ernyj/contextawareserver/dao/Location.hbm.xml</value>
+            	<value>com/ernyj/contextawareserver/dao/Sensor.hbm.xml</value>
+            	<value>com/ernyj/contextawareserver/dao/Context.hbm.xml</value>
+            	<value>com/ernyj/contextawareserver/dao/User.hbm.xml</value></list>
+        </property>
+        <!-- 设置Hibernate的相关属性 -->
+        <property name="hibernateProperties">
+            <props>
+                <!-- 设置Hibernate的数据库方言 -->
+                <prop key="hibernate.dialect">org.hibernate.dialect.MySQLDialect</prop>
+                <!-- 设置Hibernate是否在控制台输出SQL语句，开发调试阶段通常设为true -->
+                <prop key="show_sql">true</prop>
+				<!-- 设置Hibernate一个提交批次中的最大SQL语句数 -->
+                <prop key="hibernate.jdbc.batch_size">50</prop>
+            </props>
+        </property>
+    </bean>
+
+    <!--定义Hibernate的事务管理器HibernateTransactionManager -->
+    <bean id="transactionManager" class="org.springframework.orm.hibernate3.HibernateTransactionManager">
+        <!-- 依赖注入上面定义的sessionFactory -->
+        <property name="sessionFactory" ref="sessionFactory"/></bean>
+
+    <!-- 定义一个事务通知txAdvice,配置事务的传播特性 -->
+	<tx:advice id="txAdvice" transaction-manager="transactionManager">
+		<tx:attributes>
+			<!-- 所有以browse、list、load、get及 is开头的业务逻辑方法均不需要事务控制且只读 -->
+			<tx:method name="list*" propagation="NOT_SUPPORTED" read-only="true"/>
+			<tx:method name="load*" propagation="NOT_SUPPORTED" read-only="true"/>
+			<tx:method name="get*" propagation="NOT_SUPPORTED" read-only="true"/>
+			<tx:method name="is*" propagation="NOT_SUPPORTED" read-only="true"/>
+			<!-- 设置所有方法均进行事务控制，如果当前没有事务，则新建一个事务 -->
+			<!-- <tx:method name="*" propagation="REQUIRED"/> -->
+		</tx:attributes>
+	</tx:advice>
+	
+	<!-- 基于AOP技术的事务管理实现 -->
+	<aop:config>
+		<!-- 定义一个事务切入点,拦截com.eportal.service.impl包中所有类的所有方法 -->
+		<aop:pointcut id="transactionPointcut" expression="execution(* com.ernyj.contextawareserver.service.*.*(..))" />
+		<!-- 引用txAdvice事务通知 -->
+		<aop:advisor advice-ref="txAdvice" pointcut-ref="transactionPointcut"/>
+	</aop:config>	
+
+	<!-- 装配HibernateTemplate实例 -->
+	<bean id="hibernateTemplate" class="org.springframework.orm.hibernate3.HibernateTemplate">
+		<constructor-arg ref="sessionFactory"/></bean>
+	
+    <!-- 装配通用数据库访问类BaseDAOImpl -->    
+	<bean id="baseDAO" class="com.ernyj.contextawareserver.dao.BaseDAOImpl">
+		<property name="hibernateTemplate" ref="hibernateTemplate"/></bean>
+	
+    <!-- 部署系统业务逻辑组件xxxServiceImpl --> 
+	<bean id="userService" class="com.ernyj.contextawareserver.service.UserServiceImpl">
+		<property name="dao" ref="baseDAO"/></bean>
+	<bean id="contextService" class="com.ernyj.contextawareserver.service.ContextServiceImpl">
+		<property name="dao" ref="baseDAO"/></bean>
+		
+    <!-- 部署Struts2.1业务控制器组件xxxAction	 -->
+	<bean id="userAction" class="com.ernyj.contextawareserver.struts.UserAction" scope="prototype">
+		<property name="userService" ref="userService"/></bean>
+	<bean id="contextAction" class="com.ernyj.contextawareserver.struts.ContextAction" scope="prototype">
+		<property name="contextService" ref="contextService"/></bean>
+		
+	<!-- 部署业务控制器组件xxxServlet	 -->
+	<!-- <bean id="contextServlet" class="com.ernyj.contextawareserver.struts.ContextServlet" scope="prototype">
+		<property name="contextService" ref="contextService"/></bean> -->
+	
+</beans>

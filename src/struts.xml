@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="gbk"?>
+<!DOCTYPE struts PUBLIC
+        "-//Apache Software Foundation//DTD Struts Configuration 2.0//EN"
+        "http://struts.apache.org/dtds/struts-2.0.dtd">
+<struts>
+	<!-- 设置Action的请求后缀为.action,防止Struts2.1将无后缀请求亦当成正常的Action请求处理 -->
+	<constant name="struts.action.extension" value="action"/>
+	<!-- 设置Web应用的默认编码集为gbk -->
+	<!-- <constant name="struts.i18n.encoding" value="gbk"/> -->
+	<!-- 设置Web应用的默认Locale为zh_CN -->
+	<!-- <constant name="struts.locale" value="zh_CN" /> -->
+	<!-- 设置Struts2.1应用的国际化资源文件，多个文件中间可用逗号分隔 -->
+	<!-- <constant name="struts.custom.i18n.resources" value="messageResource"/> -->
+	<!-- 设置Struts2.1默认的ObjectFactory为spring -->
+	<constant name="struts.objectFactory" value="spring" />
+	<!-- 设置Struts2.1应用是否处于开发模式，通常在开发调试阶段设为true,正式上线后可设为false -->
+	<constant name="struts.devMode" value="true" />
+	<!-- 设置Struts2.1允许静态方法调用 -->
+	<constant name="struts.ognl.allowStaticMethodAccess" value="true" />
+	<!-- 设置Struts2.1的默认主题为simple -->
+	<constant name="struts.ui.theme" value="simple" />
+
+    <package name="mystruts" extends="struts-default">
+		<!-- 配置自定义拦截器LoginedCheckInterceptor -->
+		<interceptors>
+			<interceptor name="loginedCheck" class="com.ernest.contextawareserver.struts.LoginedCheckInterceptor"/></interceptors>	    
+		<global-results>
+		    <result name="exception">/exception.jsp</result>
+		    <result name="tologin">/tologin.htm</result>
+		    <result name="noprim">/error.htm</result></global-results>
+		<global-exception-mappings>
+			<!-- 捕捉到Exception异常(所有异常)时跳转到exception所命名的视图上 -->
+			<exception-mapping exception="java.lang.Exception" result="exception"/></global-exception-mappings>	
+    </package>
+    
+    <package name="myaction" extends="mystruts">
+    	<action name="addUser" class="userAction" method="addUser">
+    		<!-- <result name="success" type="stream">
+    			<param name="contentType">application/octet-stream</param>
+     			<param name="inputName">inputStream</param></result> -->
+    		<!-- <interceptor-ref name="loginedCheck"/> -->
+			<interceptor-ref name="defaultStack"/></action>
+		<action name="addContext" class="contextAction" method="addContext">
+    		<!-- <result name="success">/welcome.jsp</result> -->
+    		<!-- <interceptor-ref name="loginedCheck"/> -->
+			<interceptor-ref name="defaultStack"/></action>
+    </package>
+
+</struts>
